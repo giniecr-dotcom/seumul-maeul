@@ -2639,32 +2639,83 @@ function wmList(tab,kind){
   l.push({id:'__KR',n:'대한민국',ico:'🇰🇷',country:'kr',kind:'kr',fee:0,__kr:1});
   return l;
 }
+function localInfo(){
+  /* 현재 지역(바깥 지도)의 건물·명소·출구 목록 */
+  var mid=G.map,inB=null;
+  if(mid.indexOf('in_')===0){BUILDINGS.forEach(function(b){if(b.k===mid.slice(3))inB=b;});mid=inB?inB.map:(G.back&&G.back.m)||'town';}
+  var m=MAPS[mid];if(!m||!m.outdoor){mid='town';m=MAPS.town;}
+  var S=Math.max(10,Math.min(22,Math.floor(680/m.w))),items=[];
+  BUILDINGS.forEach(function(b){if(b.map!==mid)return;
+    var key=b.kind==='quiz'?'c'+b.cat:(b.kind==='gym'?'g'+b.fl:b.kind),q=questTypes().filter(function(x){return x.k===key;})[0];
+    var lk=(b.kind==='station'||b.kind==='airport')?gradeLock(b.kind):0;var st=lk?'lock':q?(questDone(ST,q)?'done':(ST.visit[key]||q.gym?'seen':'todo')):'';
+    items.push({lk:lk,id:'b:'+b.k,n:b.n,ico:b.ico||'🏠',kind:'bld',b:b,st:st,q:q,x:b.x,y:b.y,w:5,h:4,cx:(b.x+2.5)*S,cy:(b.y+2)*S});});
+  (m.npcs||[]).forEach(function(n){if(n.sprite==='spot'||n.sprite==='lm')items.push({id:'s:'+n.x+','+n.y,n:n.name||'명소',ico:'📸',kind:'spot',x:n.x,y:n.y,w:1,h:1,cx:(n.x+.5)*S,cy:(n.y+.5)*S});});
+  Object.keys(m.warps||{}).forEach(function(k){var w=m.warps[k],t=MAPS[w.m];if(!t||!t.outdoor)return;var p=k.split(',').map(Number);
+    items.push({id:'x:'+k,n:'→ '+t.name,ico:'🚪',kind:'exit',x:p[0],y:p[1],w:1,h:1,cx:(p[0]+.5)*S,cy:(p[1]+.5)*S,to:w.m});});
+  var pl=inB?{x:inB.x+2,y:inB.y+4}:(G.map===mid?{x:G.x,y:G.y}:null);
+  return {mid:mid,m:m,S:S,items:items,pl:pl,inB:inB};
+}
 function mapScreen(o){
   o=o||{};
-  var W=680,H=322,s={tab:o.tab||(o.kind==='train'?'kr':'world'),sel:null,t:0,iv:0};
+  var W=680,H=322,s={tab:o.tab||(o.kind==='train'?'kr':(o.pick?'world':'local')),sel:null,t:0,iv:0,L:null};
   var LL=function(d){return d.__kr?[127.5,36.4]:WM_LL[d.id];};
-  function list(){return wmList(s.tab,o.kind);}
+  function loc(){if(!s.L)s.L=localInfo();return s.L;}
+  function list(){return s.tab==='local'?loc().items:wmList(s.tab,o.kind);}
+  function pos(d){var v;if(s.tab==='local')return [d.cx,d.cy];v=wmView(s.tab,W,H);var ll=LL(d);return ll?[v.x(ll[0]),v.y(ll[1])]:null;}
   function canBuy(d){return o.pick&&!d.__kr&&d.kind===o.kind;}
   function here(){var m=G.map||'';return m.indexOf('dest_')===0?m.slice(5):'';}
-  function pick0(){var l=list(),h=here();s.sel=null;if(h)l.forEach(function(d){if(d.id===h)s.sel=d.id;});if(!s.sel&&l.length)s.sel=(s.tab==='kr'?'seoul':l[0].id);}
+  function pick0(){
+    var l=list(),h=here();s.sel=null;
+    if(s.tab==='local'){s.L=localInfo();l=s.L.items;var best=null,bd=1e9,pl=s.L.pl;
+      l.forEach(function(d){if(d.kind!=='bld')return;var dd=pl?Math.hypot(d.cx-(pl.x+.5)*s.L.S,d.cy-(pl.y+.5)*s.L.S):0;if(dd<bd){bd=dd;best=d;}});
+      s.sel=best?best.id:(l[0]&&l[0].id);return;}
+    if(h)l.forEach(function(d){if(d.id===h)s.sel=d.id;});if(!s.sel&&l.length)s.sel=(s.tab==='kr'?'seoul':l[0].id);}
   function byId(id){return list().filter(function(d){return d.id===id;})[0];}
   function stamps(){var n=0;DEST.forEach(function(d){if(ST.trip[d.id])n++;});return n;}
+  function title(){return s.tab==='local'?'📍 '+loc().m.name+' 지도':(s.tab==='kr'?'🇰🇷 한국 지도':'🌏 세계 지도')+' · 여행 도장 '+stamps()+'/'+DEST.length;}
   s.render=function(){
-    $('#ov').innerHTML='<div class="win"><div class="hd">🗺️ '+(s.tab==='kr'?'한국 지도':'세계 지도')+' · 여행 도장 '+stamps()+'/'+DEST.length+'</div><div class="bd" style="padding:6px 8px">'
-     +'<canvas id="wm" width="'+W+'" height="'+H+'" style="width:100%;border-radius:10px;display:block;touch-action:manipulation"></canvas>'
+    var cw=W,ch=H;if(s.tab==='local'){var L=loc();cw=L.m.w*L.S;ch=L.m.h*L.S;}
+    $('#ov').innerHTML='<div class="win"><div class="hd">'+title()+'</div><div class="bd" style="padding:6px 8px">'
+     +'<canvas id="wm" width="'+cw+'" height="'+ch+'" style="width:100%;border-radius:10px;display:block;touch-action:manipulation"></canvas>'
      +'<div id="wmi" style="margin-top:6px;min-height:44px;font-size:13px;line-height:1.5"></div></div>'
-     +'<div class="bt"><button data-btn="tw"'+(s.tab==='world'?' class="btn pri"':'')+'>🌏 세계</button><button data-btn="tk"'+(s.tab==='kr'?' class="btn pri"':'')+'>🇰🇷 한국</button>'
+     +'<div class="bt">'+(o.pick?'':'<button data-btn="tl"'+(s.tab==='local'?' class="btn pri"':'')+'>📍 이 지역</button>')+'<button data-btn="tw"'+(s.tab==='world'?' class="btn pri"':'')+'>🌏 세계</button><button data-btn="tk"'+(s.tab==='kr'?' class="btn pri"':'')+'>🇰🇷 한국</button>'
      +(o.pick?'<button data-btn="go" class="btn pri">🎫 표 사기</button>':'')+'<button data-btn="close">닫기</button></div></div>';
     var cv=$('#wm');
     cv.addEventListener('click',function(e){
-      var r=cv.getBoundingClientRect(),px=(e.clientX-r.left)*W/r.width,py=(e.clientY-r.top)*H/r.height,v=wmView(s.tab,W,H),best=null,bd=22;
-      list().forEach(function(d){var ll=LL(d);if(!ll)return;var dx=v.x(ll[0])-px,dy=v.y(ll[1])-py,dd=Math.sqrt(dx*dx+dy*dy);if(dd<bd){bd=dd;best=d;}});
+      var r=cv.getBoundingClientRect(),px=(e.clientX-r.left)*cw/r.width,py=(e.clientY-r.top)*ch/r.height,best=null,bd=s.tab==='local'?(loc().S*3):22;
+      list().forEach(function(d){var p=pos(d);if(!p)return;var dd=Math.hypot(p[0]-px,p[1]-py);if(dd<bd){bd=dd;best=d;}});
       if(best){if(s.sel===best.id)s.key('a');else{s.sel=best.id;beep(520,.03);draw();}}
     });
     draw();
   };
+  var TC={'.':'#7ec850','w':'#8fd060',',':'#4f9a3c','=':'#d8c79a','~':'#4aa8e8','#':'#2f6b3a','R':'#c0504d','B':'#e8d8b8','D':'#6b4a2a','G':'#ffd84d','L':'#e8c05a'};
+  function drawLocal(c,cv){
+    var L=loc(),m=L.m,S=L.S;
+    for(var y=0;y<m.h;y++)for(var x=0;x<m.w;x++){var ch=m.t[y][x];c.fillStyle=(m.tint&&0,TC[ch]||'#d8c79a');c.fillRect(x*S,y*S,S+.5,S+.5);}
+    c.strokeStyle='rgba(0,0,0,.06)';c.lineWidth=1;for(var gx=0;gx<=m.w;gx+=5){c.beginPath();c.moveTo(gx*S,0);c.lineTo(gx*S,m.h*S);c.stroke();}for(var gy=0;gy<=m.h;gy+=5){c.beginPath();c.moveTo(0,gy*S);c.lineTo(m.w*S,gy*S);c.stroke();}
+    list().forEach(function(d){
+      var sel=d.id===s.sel;
+      if(d.kind==='bld'){
+        var col=d.b.col||'#8a8f98';c.fillStyle='#f2ead8';c.fillRect(d.x*S,d.y*S,5*S,4*S);c.fillStyle=col;c.fillRect(d.x*S,d.y*S,5*S,1.6*S);
+        c.lineWidth=sel?3:1.5;c.strokeStyle=sel?'#ff5a5a':'#3a2a1a';c.strokeRect(d.x*S,d.y*S,5*S,4*S);
+        c.fillStyle='#6b4a2a';c.fillRect((d.x+2)*S,(d.y+3)*S,S,S);
+        c.textAlign='center';c.font=Math.floor(S*0.9)+'px sans-serif';c.fillStyle='#fff';c.fillText(d.ico,d.cx,d.y*S+S*1.2);
+        c.font='bold '+Math.max(9,Math.floor(S*0.62))+'px sans-serif';c.lineWidth=3;c.strokeStyle='rgba(255,255,255,.9)';c.fillStyle='#2a1a0a';c.strokeText(d.n,d.cx,d.y*S+S*2.7);c.fillText(d.n,d.cx,d.y*S+S*2.7);
+        if(d.st==='done'||d.st==='seen'||d.st==='lock'){c.font=Math.floor(S*.9)+'px sans-serif';c.fillText(d.st==='done'?'✅':(d.st==='lock'?'🔒':'🔸'),(d.x+4.4)*S,(d.y+0.9)*S);}
+      }else if(d.kind==='spot'){
+        c.beginPath();c.arc(d.cx,d.cy,S*0.45,0,7);c.fillStyle='#ffd84d';c.fill();c.lineWidth=sel?3:1.5;c.strokeStyle=sel?'#ff5a5a':'#3a2a1a';c.stroke();
+        if(sel){c.font='bold 11px sans-serif';c.textAlign='center';c.lineWidth=3;c.strokeStyle='rgba(255,255,255,.9)';c.fillStyle='#2a1a0a';c.strokeText(d.n,d.cx,d.cy-S*0.8);c.fillText(d.n,d.cx,d.cy-S*0.8);}
+      }else{
+        c.beginPath();c.moveTo(d.cx,d.cy-S*0.6);c.lineTo(d.cx+S*0.6,d.cy+S*0.5);c.lineTo(d.cx-S*0.6,d.cy+S*0.5);c.closePath();c.fillStyle='#fff';c.fill();c.lineWidth=sel?3:1.5;c.strokeStyle=sel?'#ff5a5a':'#1a2a3a';c.stroke();
+        c.font='bold '+(sel?'12':'10')+'px sans-serif';var al=d.cx<S*6?'left':(d.cx>m.w*S-S*6?'right':'center'),lx=al==='left'?S*0.3:(al==='right'?m.w*S-S*0.3:d.cx),ly=d.cy<S*2?d.cy+S*1.5:(d.cy>m.h*S-S*2?d.cy-S*0.9:d.cy+S*1.5);c.textAlign=al;c.lineWidth=3;c.strokeStyle='rgba(0,0,0,.7)';c.fillStyle='#fff';c.strokeText(d.n,lx,ly);c.fillText(d.n,lx,ly);
+      }
+    });
+    var pl=L.pl;if(pl){var px=(pl.x+.5)*S,py=(pl.y+.5)*S,pu=1+0.25*Math.sin(s.t/3);c.beginPath();c.arc(px,py,S*0.55*pu,0,7);c.fillStyle='#ff3b3b';c.fill();c.lineWidth=2;c.strokeStyle='#fff';c.stroke();c.font='bold 11px sans-serif';c.textAlign='center';c.lineWidth=3;c.strokeStyle='rgba(0,0,0,.7)';c.fillStyle='#fff';c.strokeText('나',px,py-S*0.9);c.fillText('나',px,py-S*0.9);}
+  }
   function draw(){
-    var cv=$('#wm');if(!cv)return;var c=cv.getContext('2d'),v=wmView(s.tab,W,H);
+    var cv=$('#wm');if(!cv)return;var c=cv.getContext('2d');
+    if(s.tab==='local'){drawLocal(c,cv);info();return;}
+    var v=wmView(s.tab,W,H);
     var g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,'#173a63');g.addColorStop(1,'#1f5a8c');c.fillStyle=g;c.fillRect(0,0,W,H);
     c.strokeStyle='rgba(255,255,255,.07)';c.lineWidth=1;
     if(s.tab==='kr'){for(var lo=120;lo<=135;lo+=2){c.beginPath();c.moveTo(v.x(lo),0);c.lineTo(v.x(lo),H);c.stroke();}for(var la=32;la<=42;la+=2){c.beginPath();c.moveTo(0,v.y(la));c.lineTo(W,v.y(la));c.stroke();}}
@@ -2689,7 +2740,15 @@ function mapScreen(o){
     info();
   }
   function info(){
-    var el=$('#wmi');if(!el)return;var d=byId(s.sel);if(!d){el.innerHTML='';return;}
+    var el=$('#wmi');if(!el)return;var d=byId(s.sel);
+    if(s.tab==='local'){
+      var L=loc(),nb=L.items.filter(function(x){return x.kind==='bld';}).length,dn=L.items.filter(function(x){return x.st==='done';}).length;
+      if(!d){el.innerHTML='이 지역에는 표시할 건물이 없어요.';return;}
+      if(d.kind==='bld'){var q=d.q;el.innerHTML='<b>'+d.ico+' '+esc(d.n)+'</b>'+(d.lk?' <span style="color:#ffb4b4">🔒 '+d.lk+'학년이 되면 열려요</span>':'')+' <span style="opacity:.8">· 문은 건물 아래쪽 가운데예요 (🟫)</span><br>'+(q?(d.st==='done'?'✅ 퀘스트 완료':d.st==='seen'?'🔸 들어가 봤어요 — '+esc(q.d):'⬜ '+esc(q.d)):'🏠 자유롭게 들러 볼 수 있어요')+'<br><span style="opacity:.7;font-size:12px">이 지역 건물 '+nb+'곳 · 완료 '+dn+'곳 · 🔴 나의 위치</span>';}
+      else if(d.kind==='spot')el.innerHTML='<b>📸 '+esc(d.n)+'</b> — 도시의 명소예요. 가까이 가서 사진을 찍어 보세요!';
+      else el.innerHTML='<b>'+esc(d.n)+'</b> — 이 길로 가면 다른 마을이 나와요.';
+      return;}
+    if(!d){el.innerHTML='';return;}
     if(d.__kr){el.innerHTML='<b>🇰🇷 대한민국</b> — 눌러서(A) 한국 지도를 열어요. 기차로 갈 수 있는 도시가 많아요.';return;}
     var cn=COUNTRIES[d.country]?COUNTRIES[d.country].n:'';
     var vis=ST.trip[d.id],lm=ST.q[d.lmq],hq=ST.q[d.hq];
@@ -2699,13 +2758,14 @@ function mapScreen(o){
       +(o.pick&&!canBuy(d)?'<br><span style="color:#ffb4b4">이 도시는 '+(o.kind==='train'?'공항(✈️)':'기차역(🚉)')+'에서 갈 수 있어요.</span>':'');
   }
   function move(dx,dy){
-    var l=list(),cur=byId(s.sel),v=wmView(s.tab,W,H);if(!cur)return;var a=LL(cur),ax=v.x(a[0]),ay=v.y(a[1]),best=null,bs=1e9;
-    l.forEach(function(d){if(d.id===cur.id)return;var b=LL(d);if(!b)return;var ddx=v.x(b[0])-ax,ddy=v.y(b[1])-ay,dist=Math.sqrt(ddx*ddx+ddy*ddy)||1,cs=(ddx*dx+ddy*dy)/dist;if(cs<0.35)return;var sc=dist*(2.2-cs);if(sc<bs){bs=sc;best=d;}});
+    var l=list(),cur=byId(s.sel);if(!cur)return;var a=pos(cur),best=null,bs=1e9;if(!a)return;
+    l.forEach(function(d){if(d.id===cur.id)return;var b=pos(d);if(!b)return;var ddx=b[0]-a[0],ddy=b[1]-a[1],dist=Math.sqrt(ddx*ddx+ddy*ddy)||1,cs=(ddx*dx+ddy*dy)/dist;if(cs<0.35)return;var sc=dist*(2.2-cs);if(sc<bs){bs=sc;best=d;}});
     if(best){s.sel=best.id;beep(520,.03);draw();}
   }
   function tab(t){if(s.tab===t)return;s.tab=t;pick0();s.render();}
   function buy(){
     var d=byId(s.sel);if(!d)return;
+    if(s.tab==='local'){if(d.kind==='bld')toast(d.ico+' '+d.n+' — 건물 아래쪽 문으로 들어가요');return;}
     if(d.__kr){tab('kr');return;}
     if(!o.pick){return;}
     if(!canBuy(d)){toast(o.kind==='train'?'✈️ 공항에서 갈 수 있는 곳이에요!':'🚉 기차역에서 갈 수 있는 곳이에요!');return;}
@@ -2714,9 +2774,9 @@ function mapScreen(o){
   s.key=function(k){
     if(k==='left')move(-1,0);else if(k==='right')move(1,0);else if(k==='up')move(0,-1);else if(k==='down')move(0,1);
     else if(k==='a'||k==='start')buy();
-    else if(k==='b'){if(s.tab==='kr'&&o.kind!=='train'){tab('world');}else{closeOv();if(o.back)o.back();}}
+    else if(k==='b'){if(s.tab==='kr'&&o.kind!=='train'){tab('world');}else if(s.tab==='world'&&!o.pick){tab('local');}else{closeOv();if(o.back)o.back();}}
   };
-  s.btn=function(b){if(b==='tw')tab('world');else if(b==='tk')tab('kr');else if(b==='go')buy();else if(b==='close'){closeOv();if(o.back)o.back();}};
+  s.btn=function(b){if(b==='tl')tab('local');else if(b==='tw')tab('world');else if(b==='tk')tab('kr');else if(b==='go')buy();else if(b==='close'){closeOv();if(o.back)o.back();}};
   s.stop=function(){clearInterval(s.iv);};
   pick0();
   openOv(s);
@@ -2869,6 +2929,7 @@ function paintHud(){
 /* ===================== 건물별 필수 방문 퀘스트 ===================== */
 function questTypes(){
   var a=[{k:'arcade',ico:'🕹️',n:'오락실',d:'오락실에 들어가 미니게임 1판 해 보기'},{k:'drive',ico:'🚗',n:'운전학원',d:'운전학원에 들어가 도로주행 1회 완주하기'},{k:'station',ico:'🚉',n:'기차역',d:'기차역에서 표를 사고 국내 여행 다녀오기'},{k:'airport',ico:'✈️',n:'공항',d:'공항에서 표를 사고 비행기 여행 다녀오기'}];
+  a=a.filter(function(q){return !(q.k==='station'||q.k==='airport')||!gradeLock(q.k);});
   CATS.forEach(function(c,i){a.push({k:'c'+i,ico:c.ico,n:c.n,d:c.n+'에 들어가 이 분야 퀴즈 1개 풀기'});});
   GYM_INFO.forEach(function(g,i){a.push({k:'g'+i,ico:g.ico,n:g.n+' 체육관',d:g.n+' 체육관 배지 받기',gym:1});});
   return a;
@@ -3271,7 +3332,12 @@ function canWalk(x,y){
   return !npcAt(m,x,y);
 }
 function held(){return HELD.length?HELD[HELD.length-1]:null;}
+function gradeNum(){var g=ST&&ST.gc;if(!g||g==='*')return 9;var n=parseInt(g,10);return n>=1&&n<=3?n:9;}
+function gradeLock(kind){var need=kind==='station'?2:(kind==='airport'?3:1);return gradeNum()<need?need:0;}
 function doWarp(w){
+  var lk=(w.m==='in_station'||w.m==='in_airport')&&MAP().outdoor&&!MAP().dest?gradeLock(w.m.slice(3)):0;
+  if(lk){var nm=w.m==='in_station'?'기차역':'공항';G.y=Math.min(MAP().h-1,G.y+1);G.moving=false;saveLocal();
+    say([['안내문','🔒 '+nm+'은 '+lk+'학년이 되면 열려요!'+(lk===2?' 1학년은 태초 마을에서 학교 생활을 먼저 익혀요.':' 2학년까지는 기차역으로 국내 여행을 다니고, 3학년이 되면 공항으로 세계로 떠나요.')]]);return;}
   var cur=MAP(),isIn=function(id){return id==='in_station'||id==='in_airport';};
   if(isIn(w.m)){G.back=cur.dest?{m:cur.id,x:G.x,y:G.y+1,d:'down'}:null;}
   else if(isIn(cur.id)&&G.back&&G.x===5&&G.y===8&&MAPS[G.back.m]){w={m:G.back.m,x:G.back.x,y:G.back.y,d:G.back.d};G.back=null;}
@@ -4301,13 +4367,12 @@ function interact(){
 function gradReq(){
   var z=zones(ST),nf=Object.keys(ST.esc2.f).length,kr=0,ov=0,lm=0,tot=questTypes().length,left=questLeft(ST).length;
   DEST.forEach(function(d){if(ST.trip[d.id]){if(d.country==='kr')kr++;else ov++;}if(ST.q[d.lmq])lm++;});
-  var r=[
+  var g=gradeNum(),r=[
     {t:'🏅 체육관 배지 '+FLOORS.length+'개',d:nf,n:FLOORS.length},
     {t:'📜 필수 방문 퀘스트 모두',d:tot-left,n:tot},
-    {t:'🧠 퀴즈 100문제 정답',d:z.q.d,n:100},
-    {t:'🇰🇷 국내 도시 여행 도장 5곳',d:kr,n:5},
-    {t:'🌏 해외 도시 여행 도장 10곳',d:ov,n:10},
-    {t:'📸 도시 랜드마크 사진 15곳',d:lm,n:15}];
+    {t:'🧠 퀴즈 '+(g>=3?100:(g===2?80:60))+'문제 정답',d:z.q.d,n:(g>=3?100:(g===2?80:60))}];
+  if(g>=2)r.push({t:'🇰🇷 국내 도시 여행 도장 '+(g>=3?5:3)+'곳',d:kr,n:(g>=3?5:3)});
+  if(g>=3){r.push({t:'🌏 해외 도시 여행 도장 10곳',d:ov,n:10});r.push({t:'📸 도시 랜드마크 사진 15곳',d:lm,n:15});}
   r.forEach(function(x){x.ok=x.d>=x.n;});
   return r;
 }
