@@ -3994,7 +3994,7 @@ function classScreen(){
     items:[{t:'닫기'}],onSel:openMenu,onB:openMenu});
 }
 function openMenu(){
-  var items=[{t:'🎯 버킷 도감(빙고)'},{t:'📖 사기 도감'},{t:'🪪 트레이너 카드'},{t:'🌍 우리 반 현황'},{t:'🏆 오락실 랭킹'},{t:ST.snd?'🔊 소리: 켜짐':'🔇 소리: 꺼짐'},{t:'💾 저장하기'},{t:'📜 필수 방문 퀘스트'},{t:'😀 내 이모티콘 ('+(ST.emo||'😀')+')'},{t:'🗺️ 도시 퀘스트(랜드마크·히든)'},{t:'📩 담임 메시지'+(tgPending()?' 🔴':'')},{t:'🗺️ 지도'},{t:'🎓 졸업 요건'}].concat(window.ACCT?[{t:'🚪 로그아웃 (기록은 저장돼요)'}]:ST.tester?[{t:'🚪 로그아웃 (테스터 전용)'}]:[]).concat([{t:'❌ 닫기'}]);
+  var items=[{t:'🎯 버킷 도감(빙고)'},{t:'📖 사기 도감'},{t:'🪪 트레이너 카드'},{t:'🌍 우리 반 현황'},{t:'🏆 오락실 랭킹'},{t:ST.snd?'🔊 소리: 켜짐':'🔇 소리: 꺼짐'},{t:'💾 저장하기'},{t:'📜 필수 방문 퀘스트'},{t:'😀 내 이모티콘 ('+(ST.emo||'😀')+')'},{t:'🗺️ 도시 퀘스트(랜드마크·히든)'},{t:'📩 담임 메시지'+(tgPending()?' 🔴':'')},{t:'🗺️ 지도'},{t:'🎓 졸업 요건'}].concat(window.ACCT?[{t:'🚪 로그아웃 (기록은 저장돼요)'}]:ST.tester?[{t:'🚪 로그아웃 (테스터 전용)'}]:[]).concat(ST.tester?[{t:'🎬 엔딩 영상 보기 (테스터 전용)'}]:[]).concat([{t:'❌ 닫기'}]);
   listScreen({head:'📋 메뉴 · 🪙 '+(ST.coin||0),items:items,onSel:function(i,s){
     if(i===0)bingoScreen();else if(i===1)dexScreen();else if(i===2)cardScreen();else if(i===3)classScreen();else if(i===4)rankScreen(openMenu);
     else if(i===5){ST.snd=ST.snd?0:1;s.o.items[5].t=ST.snd?'🔊 소리: 켜짐':'🔇 소리: 꺼짐';s.render();saveLocal();}
@@ -4007,6 +4007,7 @@ function openMenu(){
     else if(i===12)gradScreen(openMenu);
     else if(i===13&&window.ACCT)acctLogout();
     else if(i===13&&ST.tester){listScreen({head:'🚪 로그아웃',body:'이 기기의 저장 기록이 지워지고 처음 화면으로 돌아가요. 정말 로그아웃할까요?',items:[{t:'아니요'},{t:'네, 로그아웃'}],cur:0,onSel:function(j){if(j===1){try{localStorage.removeItem(STORE2);}catch(e){}ST=null;G.map='town';G.x=20;G.y=20;G.dir='up';REMOTES.length=0;closeOv();paintHud();titleScreen();}else openMenu();},onB:openMenu});}
+    else if(i===14&&ST.tester){closeOv();endingMovie(function(){endingScreen();});}
     else closeOv();
   },onB:closeOv});
 }
