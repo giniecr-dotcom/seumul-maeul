@@ -10,7 +10,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:#0d1022;color:#fff;font-family:'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;word-break:keep-all;overflow-wrap:break-word;-webkit-text-size-adjust:100%}
 .emo,.li,.hd,.bc,#dlg,.pill,.rk{font-family:'Noto Sans KR','Apple SD Gothic Neo','Malgun Gothic','Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
-body{min-height:100vh;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+body{overflow-x:hidden;min-height:100vh;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 #app{max-width:720px;margin:0 auto;padding:6px 6px 90px}
 #hud{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;font-weight:700;padding:6px 10px;background:#1b2147;border:3px solid #39407a;border-radius:8px}
 #hud .nm{font-weight:900;font-size:13px}
@@ -31,15 +31,15 @@ body{min-height:100vh;touch-action:manipulation;user-select:none;-webkit-user-se
 #dlg .dm{position:absolute;right:10px;bottom:4px;animation:bl .8s steps(2) infinite;font-size:.9em}
 @keyframes bl{50%{opacity:0}}
 #hint{font-size:11px;color:#8d96d6;text-align:center;margin:6px 0}
-#pad{display:none;justify-content:space-between;align-items:center;padding:10px 6px 24px;touch-action:none}
+#pad{display:none;justify-content:space-between;align-items:center;gap:2vw;padding:10px 4px calc(24px + env(safe-area-inset-bottom));touch-action:none;overflow:hidden}
 @media (pointer:coarse),(max-width:760px){#pad{display:flex}#hint{display:none}}
-#pad .dp{display:grid;grid-template-columns:repeat(3,62px);grid-template-rows:repeat(3,62px);gap:5px}
+#pad .dp{display:grid;grid-template-columns:repeat(3,min(62px,14vw));grid-template-rows:repeat(3,min(62px,14vw));gap:min(5px,1vw)}
 .pb{border:3px solid #39407a;background:#2c3470;color:#fff;border-radius:12px;font-weight:900;font-size:20px;display:grid;place-items:center;touch-action:none}
 .pb:active,.pb.on{background:#f0a53a;color:#2a1d00}
-.ab{display:flex;gap:12px;align-items:center}
-.ab .pb{width:66px;height:66px;border-radius:50%;font-size:22px}
+.ab{display:flex;gap:min(12px,2vw);align-items:center}
+.ab .pb{width:min(66px,15vw);height:min(66px,15vw);border-radius:50%;font-size:22px}
 .st{display:flex;flex-direction:column;gap:8px}
-.st .pb{width:74px;height:34px;font-size:12px;border-radius:99px}
+.st .pb{width:min(74px,16vw);height:34px;font-size:11px;border-radius:99px}
 #ov{position:fixed;inset:0;z-index:50;background:rgba(6,9,28,.92);display:flex;justify-content:center;overflow:auto;padding:10px}
 #ov[hidden]{display:none}
 .win{width:100%;max-width:620px;margin:auto;background:#fff8e1;color:#1b1b2f;border:5px solid #1b1b2f;border-radius:8px;box-shadow:inset 0 0 0 3px #fff,0 6px 0 #000;overflow:hidden}
@@ -2623,6 +2623,7 @@ function heroScreen(done){
   openOv(s);
 }
 /* ===================== 세계 지도 · 한국 지도 (거상식 지도) ===================== */
+(function(){if(window.__feeUp)return;window.__feeUp=1;DEST.forEach(function(d){d.fee=d.kind==='train'?d.fee*4:d.fee*4;});})();
 var WM_LL={tokyo:[139.69,35.68],osaka:[135.5,34.69],kyoto:[135.77,35.01],ny:[-74,40.71],dc:[-77.04,38.9],sf:[-122.42,37.77],paris:[2.35,48.86],mont:[-1.51,48.64],nice:[7.26,43.7],london:[-.13,51.51],rome:[12.5,41.9],beijing:[116.41,39.9],agra:[78.01,27.18],cairo:[31.24,30.04],capetown:[18.42,-33.92],rio:[-43.17,-22.91],cusco:[-71.97,-13.53],sydney:[151.21,-33.87],queenstown:[168.66,-45.03],maldives:[73.51,4.18],antarctica:[-58.78,-62.22],tromso:[18.96,69.65],bangkok:[100.5,13.76],singapore:[103.82,1.35],halong:[107.07,20.91],istanbul:[28.98,41.01],athens:[23.73,37.98],barcelona:[2.17,41.39],berlin:[13.4,52.52],zermatt:[7.75,46.02],amsterdam:[4.9,52.37],moscow:[37.62,55.75],cancun:[-86.85,21.16],toronto:[-79.38,43.65],buenosaires:[-58.38,-34.6],marrakech:[-7.99,31.63],nairobi:[35.8,-1.4],hawaii:[-157.86,21.31],hongkong:[114.17,22.32],venice:[12.33,45.44],
  seoul:[126.98,37.57],busan:[129.08,35.18],gyeongju:[129.21,35.84],dangjin:[126.65,36.89],jeju:[126.53,33.5],cheongju:[127.49,36.64],suwon:[127.03,37.26],incheon:[126.71,37.46],daejeon:[127.38,36.35],daegu:[128.6,35.87],gwangju:[126.85,35.16],jeonju:[127.15,35.82],gangneung:[128.9,37.75],sokcho:[128.59,38.21],yeosu:[127.66,34.76],tongyeong:[128.43,34.85],andong:[128.73,36.57],chuncheon:[127.73,37.88],ulsan:[129.31,35.54],buyeo:[126.91,36.28],pohang:[129.37,36.02]};
 var WM_WORLD=[
@@ -3667,6 +3668,15 @@ function fleeTry(cb){
   if((ST.coin||0)>=2){ST.coin-=2;ST.fled=(ST.fled||0)+1;saveLocal();paintHud();toast('🏃 도망치다 🪙 2개를 흘렸어요!');cb();}
   else toast('🪙가 2개 이상 있어야 도망칠 수 있어요! 맞서 싸워요!');
 }
+/* ----- 오답 패널티: 최근 3분 안 오답 수에 따라 대기시간(5·10·20·40·60초) ----- */
+function quizLock(){var u=(ST.wrUntil||0)-Date.now();return u>0?Math.ceil(u/1000):0;}
+function wrongPenalty(){
+  var now=Date.now();ST.wrList=(ST.wrList||[]).filter(function(t){return now-t<180000;});ST.wrList.push(now);
+  var sec=Math.min(60,5*Math.pow(2,ST.wrList.length-1));ST.wrUntil=now+sec*1000;saveLocal();return sec;
+}
+function lockTick(s,setMsg){
+  var iv=setInterval(function(){if(OV!==s){clearInterval(iv);return;}var l=quizLock();if(l<=0){clearInterval(iv);setMsg('');}else setMsg('⏳ 오답 패널티! '+l+'초 뒤에 다시 고를 수 있어요.');s.render();},1000);
+}
 function quizScreen(it,npc,rv){
   var hp=100,msg='';
   var items=it.so.map(function(o,i){return {t:it.ty==='ox'?(o==='O'?'⭕ O — 맞다':'❌ X — 틀리다'):['①','②','③','④'][i]+' '+o,dis:false};});
@@ -3676,13 +3686,14 @@ function quizScreen(it,npc,rv){
     items:items,
     onSel:function(i,s){
       if(items[i].dis)return;
+      var lk=quizLock();if(lk>0){msg='⏳ 오답 패널티! '+lk+'초 뒤에 다시 고를 수 있어요.';beep(200,.08,'sawtooth');s.render();lockTick(s,function(m){msg=m;});return;}
       if(i===it.sa){
         if(rv){hp=0;s.lock=true;s.render();beep(880,.12);setTimeout(function(){closeOv();npc.rt=Date.now()+25000+Math.random()*55000;toast('복습 정답! 👏');say([[npc.name,'복습까지 완벽해! '+it.tip]]);},650);return;}
         ST.q[it.id]=1;hp=0;s.lock=true;s.render();beep(880,.12);npc.rt=Date.now()+20000+Math.random()*50000;
         setTimeout(function(){closeOv();afterChange('정답!');say([[npc.name,'정답이야! '+it.tip]]);},650);
       }else{
         ST.qt[it.id]=(ST.qt[it.id]||0)+1;items[i].dis=true;beep(200,.14,'sawtooth');
-        msg='아쉬워요! 다시 골라 보세요. (이제부터 맞히면 XP가 절반이에요)';s.render();
+        var ps=wrongPenalty();msg='아쉬워요! ⏳ '+ps+'초 뒤에 다시 골라 보세요. (이제부터 맞히면 XP가 절반이에요)';s.render();lockTick(s,function(m){msg=m;});
       }
     },
     onB:function(){
@@ -3700,11 +3711,12 @@ function roomScreen(r,npc){
     items:items,
     onSel:function(i,s){
       if(items[i].dis)return;
+      var lk=quizLock();if(lk>0){msg='⏳ 오답 패널티! '+lk+'초 뒤에 다시 고를 수 있어요.';beep(200,.08,'sawtooth');s.render();lockTick(s,function(m){msg=m;});return;}
       if(i===r.sa){
         ST.esc2.s[r.gi]=1;hp=0;s.lock=true;s.render();beep(880,.12);
         setTimeout(function(){closeOv();afterChange('🔑 열쇠 획득!');say([[npc.name,'정답! 열쇠 숫자는 ['+r.d+'] 이야. 잘 기억해 둬!']]);},650);
       }else{
-        items[i].dis=true;beep(200,.14,'sawtooth');msg=r.so[i][1]||'다시 생각해 볼까요?';s.render();
+        items[i].dis=true;beep(200,.14,'sawtooth');var ps2=wrongPenalty();msg=(r.so[i][1]||'다시 생각해 볼까요?')+' ⏳ '+ps2+'초 뒤에 다시 골라요.';s.render();lockTick(s,function(m){msg=m;});
       }
     },
     onB:function(){closeOv();say([[npc.name,'언제든 다시 도전해!']]);}
@@ -4387,9 +4399,20 @@ function gradReq(){
   var g=gradeNum(),r=[
     {t:'🏅 체육관 배지 '+FLOORS.length+'개',d:nf,n:FLOORS.length},
     {t:'📜 필수 방문 퀘스트 모두',d:tot-left,n:tot},
-    {t:'🧠 퀴즈 '+(g>=3?100:(g===2?80:60))+'문제 정답',d:z.q.d,n:(g>=3?100:(g===2?80:60))}];
-  if(g>=2)r.push({t:'🇰🇷 국내 도시 여행 도장 '+(g>=3?5:3)+'곳',d:kr,n:(g>=3?5:3)});
-  if(g>=3){r.push({t:'🌏 해외 도시 여행 도장 10곳',d:ov,n:10});r.push({t:'📸 도시 랜드마크 사진 15곳',d:lm,n:15});}
+    {t:'🧠 퀴즈 '+(g>=3?250:(g===2?80:60))+'문제 정답',d:z.q.d,n:(g>=3?250:(g===2?80:60))}];
+  var sc=0,hq=0,bs=bingoState(ST);SCAMS.forEach(function(c){if((ST.scam[c.id]||0)>=80)sc++;});DEST.forEach(function(d){if(ST.q[d.hq])hq++;});
+  var ek=Object.keys(ST.esc2.s).length,sm=(ST.sim.done?1:0)+(ST.sim.surv?1:0)+(ST.sim.bal?1:0),dr=((ST.mg&&ST.mg.d1>=70)?1:0)+((ST.mg&&ST.mg.d2>=70)?1:0);
+  if(g>=2)r.push({t:'🇰🇷 국내 도시 여행 도장 '+(g>=3?8:3)+'곳',d:kr,n:(g>=3?8:3)});
+  if(g>=3){
+    r.push({t:'🌏 해외 도시 여행 도장 20곳',d:ov,n:20});
+    r.push({t:'📸 도시 랜드마크 사진 30곳',d:lm,n:30});
+    r.push({t:'🔮 도시 히든 퀘스트 10곳',d:hq,n:10});
+    r.push({t:'🕵️ 사기몬 봉인(80점↑) 8마리',d:sc,n:8});
+    r.push({t:'🔑 방탈출 열쇠 12개',d:ek,n:12});
+    r.push({t:'🎯 빙고 3줄 완성',d:bs.lines.length,n:3});
+    r.push({t:'🏠 자취 시뮬 3종 완료',d:sm,n:3});
+    r.push({t:'🚗 운전 시험 1·2종 합격(70점↑)',d:dr,n:2});
+  }
   r.forEach(function(x){x.ok=x.d>=x.n;});
   return r;
 }
