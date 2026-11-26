@@ -2445,7 +2445,7 @@ function charStyle(r,dir,pal){
    case 'chef':case 'toque':r(4,-2,8,3,'#fff');r(5,-3,6,1,'#fff');r(4,8,8,1,'#d0d0d0');break;
    case 'hachi':r(4,2,8,1,'#fff');r(7,2,2,1,'#d63a3a');break;
    case 'cowboy':r(1,1,14,1,'#7a4a21');r(4,-1,8,3,'#8a5a2a');r(4,1,8,1,'#5a3a1a');break;
-   case 'cap':r(4,0,8,2,'#d63a3a');if(dir==='down'||side)r(3,2,10,1,'#b02a2a');break;
+   case 'cap':r(4,0,8,2,hc||'#d63a3a');if(dir==='down'||side)r(3,2,10,1,'rgba(0,0,0,.28)');break;
    case 'breton':r(4,8,8,1,hc||'#2a3a7a');r(4,10,8,1,hc||'#2a3a7a');break;
    case 'beret':r(3,0,9,2,hc||'#222');r(8,-1,2,1,hc||'#222');break;
    case 'bowler':r(2,1,12,1,'#222');r(4,-1,8,3,'#2a2a3a');break;
@@ -2564,12 +2564,12 @@ function bgmUpdate(){
 // ===== 캐릭터 선택 =====
 var HEROES=[
  {n:'빨간 모자',h:'#3a2a1a',s:'#f2c9a0',c:'#3b82f6',p:'#2b2b45',hat:'#e04040'},
- {n:'분홍 단발',h:'#2a1a1a',s:'#f6d2b0',c:'#f0709a',p:'#4a3a5a'},
- {n:'초록 후드',h:'#7a4a21',s:'#e8b98f',c:'#2f9a5a',p:'#3a3a3a'},
+ {n:'분홍 니트',h:'#2a1a1a',s:'#f6d2b0',c:'#f0709a',p:'#4a3a5a'},
+ {n:'초록 티',h:'#7a4a21',s:'#e8b98f',c:'#2f9a5a',p:'#3a3a3a'},
  {n:'햇살 금발',h:'#e8c04a',s:'#f6d6b8',c:'#f4b840',p:'#3a4a6a'},
- {n:'보라 안경',h:'#222',s:'#f2c9a0',c:'#8e5bd9',p:'#2b2b45',glass:1},
+ {n:'보라 니트',h:'#222',s:'#f2c9a0',c:'#8e5bd9',p:'#2b2b45',glass:1},
  {n:'회색 비니',h:'#4a2a1a',s:'#d9a77a',c:'#8a8f98',p:'#2b2b45',st:'nordic',hat:'#6a7080'},
- {n:'파랑 캡',h:'#1a1a1a',s:'#c9976a',c:'#e8e8e8',p:'#2a3a6a',st:'cap'},
+ {n:'파랑 캡',h:'#1a1a1a',s:'#c9976a',c:'#e8e8e8',p:'#2a3a6a',st:'cap',hat:'#3b6fd6'},
  {n:'밀짚모자',h:'#6a4a2a',s:'#f2c9a0',c:'#e8884a',p:'#4a4a6a',st:'straw'}
 ];
 function heroPal(){var i=(ST&&ST.hero)|0;return HEROES[i%HEROES.length];}
@@ -2624,7 +2624,7 @@ function fixState(st){
   if(!st)return st;
   st.q=st.q||{};st.qt=st.qt||{};st.sim=st.sim||{done:0,surv:0,bal:0};st.scam=st.scam||{};
   st.esc2=st.esc2||{s:{},f:{},fin:0};st.esc2.s=st.esc2.s||{};st.esc2.f=st.esc2.f||{};
-  st.proof=st.proof||{};st.bingo=st.bingo||{};st.flags=st.flags||{intro:0};if(st.snd==null)st.snd=1;if(st.coin==null)st.coin=0;st.mg=st.mg||{};st.fled=st.fled||0;st.trip=st.trip||{};st.visit=st.visit||{};st.hid=st.hid||{};if(!st.emo)st.emo='😀';
+  st.proof=st.proof||{};st.bingo=st.bingo||{};st.flags=st.flags||{intro:0};if(st.flags.intro&&st.flags.tg==null){st.flags.tg=99;st.flags.tn=99;}if(st.snd==null)st.snd=1;if(st.coin==null)st.coin=0;st.mg=st.mg||{};st.fled=st.fled||0;st.trip=st.trip||{};st.visit=st.visit||{};st.hid=st.hid||{};if(!st.emo)st.emo='😀';
   return st;
 }
 function loadLocal(){try{var r=localStorage.getItem(STORE2);return r?JSON.parse(r):null;}catch(e){return null;}}
@@ -3159,6 +3159,7 @@ function showBanner(name){
   var b=$('#banner');if(!b)return;b.textContent='📍 '+name;b.classList.remove('show');void b.offsetWidth;b.classList.add('show');
 }
 function onArrive(){
+  if(typeof teacherMailCheck==='function')teacherMailCheck();
   var m=MAP(),w=m.warps[G.x+','+G.y];if(typeof sendPresence==='function')sendPresence();
   if(w){doWarp(w);return;}
   if(tileAt(m,G.x,G.y)===','){
@@ -3206,7 +3207,7 @@ function npcMark(n){
   if(n.kind==='sim')return ST.sim.done?'ok':'!';
   if(n.kind==='hidden')return ST.q[n.qid]?'ok':'';
   if(n.kind==='inst')return (ST.mg.d1>=70||ST.mg.d2>=70)?'ok':'!';
-  if(n.kind==='teacher')return ST.flags.intro?'':'!';
+  if(n.kind==='teacher')return (ST.flags.intro&&!(typeof tgPending==='function'&&tgPending()))?'':'!';
   return '';
 }
 function drawTile(m,ch,tx,ty,sx,sy,t){
@@ -3683,7 +3684,7 @@ function classScreen(){
     items:[{t:'닫기'}],onSel:openMenu,onB:openMenu});
 }
 function openMenu(){
-  var items=[{t:'🎯 버킷 도감(빙고)'},{t:'📖 사기 도감'},{t:'🪪 트레이너 카드'},{t:'🌍 우리 반 현황'},{t:'🏆 오락실 랭킹'},{t:ST.snd?'🔊 소리: 켜짐':'🔇 소리: 꺼짐'},{t:'💾 저장하기'},{t:'📜 필수 방문 퀘스트'},{t:'😀 내 이모티콘 ('+(ST.emo||'😀')+')'},{t:'🗺️ 도시 퀘스트(랜드마크·히든)'},{t:'🏫 학년·반 ('+gcLabel(ST.gc)+')'}].concat(ST.tester?[{t:'🚪 로그아웃 (테스터 전용)'}]:[]).concat([{t:'❌ 닫기'}]);
+  var items=[{t:'🎯 버킷 도감(빙고)'},{t:'📖 사기 도감'},{t:'🪪 트레이너 카드'},{t:'🌍 우리 반 현황'},{t:'🏆 오락실 랭킹'},{t:ST.snd?'🔊 소리: 켜짐':'🔇 소리: 꺼짐'},{t:'💾 저장하기'},{t:'📜 필수 방문 퀘스트'},{t:'😀 내 이모티콘 ('+(ST.emo||'😀')+')'},{t:'🗺️ 도시 퀘스트(랜드마크·히든)'},{t:'📩 담임 메시지'+(tgPending()?' 🔴':'')}].concat(ST.tester?[{t:'🚪 로그아웃 (테스터 전용)'}]:[]).concat([{t:'❌ 닫기'}]);
   listScreen({head:'📋 메뉴 · 🪙 '+(ST.coin||0),items:items,onSel:function(i,s){
     if(i===0)bingoScreen();else if(i===1)dexScreen();else if(i===2)cardScreen();else if(i===3)classScreen();else if(i===4)rankScreen(openMenu);
     else if(i===5){ST.snd=ST.snd?0:1;s.o.items[5].t=ST.snd?'🔊 소리: 켜짐':'🔇 소리: 꺼짐';s.render();saveLocal();}
@@ -3691,7 +3692,7 @@ function openMenu(){
     else if(i===7)questScreen();
     else if(i===8)emotePicker();
     else if(i===9)cityQuestScreen();
-    else if(i===10)gcScreen(openMenu,true);
+    else if(i===10)mailScreen();
     else if(i===11&&ST.tester){listScreen({head:'🚪 로그아웃',body:'이 기기의 저장 기록이 지워지고 처음 화면으로 돌아가요. 정말 로그아웃할까요?',items:[{t:'아니요'},{t:'네, 로그아웃'}],cur:0,onSel:function(j){if(j===1){try{localStorage.removeItem(STORE2);}catch(e){}ST=null;G.map='town';G.x=20;G.y=20;G.dir='up';REMOTES.length=0;closeOv();paintHud();titleScreen();}else openMenu();},onB:openMenu});}
     else closeOv();
   },onB:closeOv});
@@ -3981,7 +3982,7 @@ function gameDrive(lic){
     var sc=Math.max(0,100-total()),secs=Math.round(s.tick/10);
     drvFinish(lic,sc,s.pen,secs);
   }
-  var KP={Space:'gas',KeyZ:'clutch',KeyX:'brake'};
+  var KP={KeyC:'gas',Space:'gas',KeyZ:'clutch',KeyX:'brake'};
   function kd(e){
     if(!OV||OV!==s)return;
     var c=e.code;
@@ -3999,11 +4000,12 @@ function gameDrive(lic){
     var gh='<div class="gz">'+gears.map(function(g){return '<button data-btn="g'+g+'">'+g+'</button>';}).join('')+'</div>';
     var wheel='<div class="cw"><svg id="whl" viewBox="0 0 100 100" width="96" height="96"><circle cx="50" cy="50" r="40" fill="none" stroke="#262b36" stroke-width="11"/><circle cx="50" cy="50" r="40" fill="none" stroke="#5a6272" stroke-width="2.5"/><rect x="8" y="46" width="30" height="8" rx="3" fill="#262b36"/><rect x="62" y="46" width="30" height="8" rx="3" fill="#262b36"/><rect x="46" y="58" width="8" height="32" rx="3" fill="#262b36"/><circle cx="50" cy="50" r="12" fill="#3a4150"/><circle cx="50" cy="50" r="5" fill="#d63a3a"/><rect x="46.5" y="3" width="7" height="12" rx="2" fill="#e8c04a"/></svg>'
       +'<div class="sw"><button data-steer="-1">◀</button><button data-steer="1">▶</button></div></div>';
-    var peds='<div class="peds">'+(manual?'<div class="pd" data-ped="clutch"><span>클러치</span></div>':'')+'<div class="pd" data-ped="brake"><span>브레이크</span></div><div class="pd gs" data-ped="gas"><span>가속</span></div></div>';
+    var peds='<div class="peds">'+(manual?'<div class="pd" data-ped="clutch"><span>클러치<br><small>[Z]</small></span></div>':'')+'<div class="pd" data-ped="brake"><span>브레이크<br><small>[X]</small></span></div><div class="pd gs" data-ped="gas"><span>가속<br><small>[C]</small></span></div></div>';
     $('#ov').innerHTML=mgShell((manual?'🚙 1종 보통(수동)':'🚘 2종 보통(자동)')+' 도로주행',
       '<div class="sub">'+(manual?'클러치·브레이크 중 하나를 밟은 채 🔑시동 → 기어 1단 → 가속페달을 밟으며 클러치를 천천히 떼요. 기어를 바꿀 땐 클러치를 밟고! 멈출 땐 클러치+브레이크.':'브레이크 페달을 밟은 채 🔑시동 → 기어 D → 브레이크를 떼고 가속페달! 신호등 앞에서는 브레이크로 멈춰요.')+' 핸들은 ◀▶(키보드 ←→). 페달은 누르고 있는 동안 밟혀요.'+(manual?' (키보드: Z 클러치 · X 브레이크 · Space 가속 · Enter 시동 · 1/2 기어)':' (키보드: X 브레이크 · Space 가속 · Enter 시동 · 1 D · 2 P)')+'</div>'
+      +'<div class="sub" style="font-size:11px;opacity:.8">⌨️ 키보드: ◀▶ 핸들 · Z 클러치 · X 브레이크 · C(또는 Space) 가속 · Enter 시동 · 1/2 기어 — 여러 키를 동시에 눌러도 돼요</div>'
       +'<div id="dv"></div><div class="cab">'+wheel+gh+'<div class="ig"><button data-btn="ign" id="igb">🔑<br>시동</button></div></div>'+peds,
-      '<button data-btn="ign">🔑 시동</button><button data-btn="quit">그만하기</button>');
+      '<button data-btn="ign">🔑 시동 [Enter]</button><button data-btn="quit">그만하기</button>');
     Array.prototype.forEach.call(document.querySelectorAll('#ov [data-ped]'),function(el){
       var k=el.dataset.ped;
       el.addEventListener('pointerdown',function(e){e.preventDefault();pedal(k,1);});
@@ -4045,17 +4047,42 @@ function nextHint(){
   if(!ST.esc2.fin)return '남쪽 졸업의 문으로 가 보렴. 이제 열릴 거야!';
   return '버킷 도감과 오락실 랭킹에도 도전해 보자!';
 }
+var TG_STAGES=[
+ {need:function(z){return z.q.d>=3;},lines:['벌써 퀴즈를 풀고 있구나, 잘했어!','마을 옆 풀숲에서는 사기몬과 퀴즈몬이 나타나. 도망치면 코인을 잃으니 조심해!','마을 양옆 길 끝에는 다른 마을이 4개 있어. 마을마다 가게 주민도 달라.']},
+ {need:function(z){return z.q.d>=10;},lines:['꽤 익숙해졌네! 퀴즈를 맞히면 XP와 가끔 코인도 나와.','가운데 오락실에서는 코인으로 미니게임을, 운전학원에서는 1종·2종 가상 운전과 반 랭킹에 도전할 수 있어.','메뉴의 "필수 방문 퀘스트"와 버킷 도감(빙고)도 확인해 봐. 기차역·공항으로 여행도 떠날 수 있어.']},
+ {need:function(z){return z.q.d>=Math.ceil(z.q.t*0.5);},lines:['벌써 절반쯤 왔구나!','입학처·캠퍼스·회사·헬스장 4개의 체육관에서 배지를 모으면 남쪽 졸업의 문이 열려.','체육관 관장님은 방탈출 퀴즈를 낼 거야. 차근차근 도전해 봐!']},
+ {need:function(z){return z.q.d>=Math.ceil(z.q.t*0.8)||z.esc.fl>=2;},lines:['거의 다 왔어! 정말 대견하다.','우리 반 친구들의 XP가 모여 공동 게이지가 차오르니, 끝까지 다 같이 힘내 보자.','배지를 다 모으면 남쪽 졸업의 문이 열려. 파이팅!']}
+];
+function tgDone(){return ST.flags.tg|0;}
+function tgPending(){
+  if(!ST||!ST.flags.intro)return 0;
+  var d=tgDone();if(d>=TG_STAGES.length)return 0;
+  return TG_STAGES[d].need(zones(ST))?d+1:0;
+}
+function teacherMailCheck(){
+  var p=tgPending();
+  if(p&&(ST.flags.tn|0)<p){ST.flags.tn=p;saveLocal();toast('📩 담임 선생님에게서 메시지가 왔어요! (메뉴 → 담임 메시지)');}
+}
+function mailScreen(){
+  var p=tgPending(),d=tgDone(),items=[],acts=[];
+  if(p){items.push({t:'📩 [새 메시지] 담임 선생님'});acts.push('new');}
+  for(var i=0;i<Math.min(d,TG_STAGES.length);i++){(function(k){items.push({t:'✉️ 지난 안내 '+(k+1)+' 다시 보기'});acts.push(k);})(i);}
+  items.push({t:'← 돌아가기'});acts.push('back');
+  listScreen({head:'📩 담임 선생님 메시지',body:'<div class="sub">'+(p?'<b>'+esc(ST.nick)+'아, 잠깐 나한테 와 줄래? 다음 안내를 해 줄게.</b><br>태초 마을 가운데 담임 선생님께 말을 걸어 보세요.':'아직 새 메시지가 없어요. 퀴즈를 더 풀면 선생님이 다음 안내를 보내 줘요.')+'</div>',items:items,
+    onSel:function(i){var a=acts[i];if(a==='new'){closeOv();toast('🍎 태초 마을 가운데 담임 선생님께 가 보세요!');}else if(a==='back'){openMenu();}else{closeOv();say(TG_STAGES[a].lines.map(function(t){return ['담임 선생님',t];}));}},onB:openMenu});
+}
 function teacherTalk(n){
   if(!ST.flags.intro){
-    say([[n.name,'수능 수고했어, '+ST.nick+'!'],
-      [n.name,'합격 발표를 기다리는 동안, 어른이 되는 데 필요한 것들을 이 마을에서 모험하며 배워 보자.'],
-      [n.name,'마을 양옆 길 끝에는 다른 마을이 4개 있어. 마을마다 가게 주민도, 체육관도 달라.'],
-      [n.name,'풀숲에서는 사기몬과 퀴즈몬이 나타나는데, 도망치면 코인을 잃으니 조심해!'],
-      [n.name,'입학처·캠퍼스·회사·헬스장 4개의 체육관에서 배지를 모으면 남쪽 졸업의 문이 열려.'],
-      [n.name,'퀴즈를 맞히면 XP와 함께 가끔 코인도 나와. 가운데 오락실에서 코인으로 미니게임, 운전학원에서 1종·2종 가상 운전과 반 랭킹에 도전해 보자!'],
-      [n.name,'조작은 컴퓨터는 방향키·Z/Space(A)·X(B)·Enter(메뉴), 휴대폰은 화면 아래 십자키와 A·B·MENU 버튼이야. 메뉴에서 버킷 도감(빙고)도 볼 수 있어.'],
-      [n.name,'우리 반 친구들의 XP가 모여 공동 게이지가 차오르니, 다 같이 힘내 보자. 출발!']],
+    say([[n.name,'수능 수고했어, '+ST.nick+'! 합격 발표를 기다리는 동안, 어른이 되는 데 필요한 것들을 이 마을에서 모험하며 배워 보자.'],
+      [n.name,'조작은 컴퓨터는 방향키·Z/Space(A)·X(B)·Enter(메뉴), 휴대폰은 화면 아래 십자키와 A·B·MENU 버튼이야.'],
+      [n.name,'우선 이 마을의 가게들을 돌며 주민들이 내는 퀴즈부터 풀어 봐!'],
+      [n.name,'모험 중간에 내가 📩 메시지를 보낼 거야. 메시지가 오면 다시 나한테 와서 다음 안내를 받아 가렴. 출발!']],
       function(){ST.flags.intro=1;saveLocal();});
+    return;
+  }
+  var p=tgPending();
+  if(p){
+    say(TG_STAGES[p-1].lines.map(function(t){return [n.name,t];}),function(){ST.flags.tg=p;ST.flags.tn=Math.max(ST.flags.tn|0,p);saveLocal();toast('📩 안내 '+p+'/'+TG_STAGES.length+' 확인!');});
     return;
   }
   var z=zones(ST);
@@ -4172,19 +4199,20 @@ function encounter(){
 /* ===================== 타이틀 ===================== */
 function titleScreen(){
   var s={cur:0,isTitle:true};
-  function items(){var a=[];if(ST)a.push({t:'▶ 이어하기 ('+ST.nick+')',act:'cont'});a.push({t:'✨ 새로 시작하기',act:'new'});return a;}
+  function items(){var a=[];if(ST)a.push({t:'▶ 이어하기 ('+ST.nick+')',act:'cont'});a.push({t:'✨ 새로 시작하기',act:'new'});a.push({t:'📖 게임 방법 (기초 튜토리얼)',act:'tut'});return a;}
   s.render=function(){
     var it=items();
     $('#ov').innerHTML='<div class="win"><div class="ttl"><div style="font-size:54px">🌱</div><h1>스물 마을</h1><p>어른 되기 대모험</p><div class="pr">PRESS A / ENTER</div></div><div class="ls">'+it.map(function(x,i){return '<div class="li'+(i===s.cur?' cur':'')+'" data-i="'+i+'"><span class="ar">'+(i===s.cur?'▶':'')+'</span><span>'+esc(x.t)+'</span></div>';}).join('')+'</div><div class="ft">컴퓨터: 방향키 이동 · Z/Space 확인 · X 취소 · Enter 메뉴 / 휴대폰: 화면 아래 십자키와 A·B·MENU 버튼</div></div>';
   };
   function go(i){
     var a=items()[i];if(!a)return;
+    if(a.act==='tut'){tutorialScreen(titleScreen);return;}
     if(a.act==='cont'){
       if(ST.pos&&MAPS[ST.pos.m]&&!BLOCK[tileAt(MAPS[ST.pos.m],ST.pos.x,ST.pos.y)]){G.map=ST.pos.m;G.x=ST.pos.x;G.y=ST.pos.y;G.dir=ST.pos.d||'down';}
       syncLast();closeOv();paintHud();setupFlow(function(){say([['','어서 와, '+ST.nick+'! 모험을 이어가자.']]);});
     }else if(ST){
       listScreen({head:'새로 시작하기',body:'지금까지의 기록이 지워져요. 정말 새로 시작할까요?',items:[{t:'아니요'},{t:'네, 새로 시작'}],cur:0,onSel:function(j){if(j===1)nameScreen();else titleScreen();},onB:titleScreen});
-    }else nameScreen();
+    }else tutorialScreen(nameScreen);
   }
   s.key=function(k){var n=items().length;if(k==='up'){s.cur=(s.cur+n-1)%n;s.render();}else if(k==='down'){s.cur=(s.cur+1)%n;s.render();}else if(k==='a'||k==='start'){beep(760,.05);go(s.cur);}};
   s.pick=function(i){s.cur=i;go(i);};
@@ -4200,7 +4228,7 @@ function nameScreen(){
   s.btn=function(){
     var v=($('#nm').value||'').trim();
     if(!v){s.err='별명을 입력해 주세요.';s.render();return;}
-    var tst=/#(테스트|tester)$/i.test(v);v=v.replace(/#(테스트|tester)$/i,'').trim()||'테스터';
+    var tst=/\s*[#＃](테스트|테스터|tester)\s*$/i.test(v);v=v.replace(/\s*[#＃](테스트|테스터|tester)\s*$/i,'').trim()||'테스터';
     ST=blank(v.slice(0,8));if(tst){ST.tester=1;ST.coin=9999;}G.map='town';G.x=20;G.y=20;G.dir='up';G.moving=false;
     syncLast();closeOv();paintHud();saveLocal();schedulePush();
     heroScreen(function(){gcScreen(function(){say([['','수능이 끝난 어느 날, '+ST.nick+'은(는) 태초 마을 한가운데에 서 있었다.'],['','담임 선생님이 손짓하고 있다. A 버튼으로 말을 걸어 보자!']]);});});
@@ -4217,14 +4245,17 @@ function press(k){
   if(!ST||G.lock||G.moving)return;
   if(k==='a')interact();else if(k==='start')openMenu();else if(k==='emote')emotePicker();
 }
+var KEYMAP={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',W:'up',a:'left',A:'left',s:'down',S:'down',d:'right',D:'right','ㅈ':'up','ㅁ':'left','ㄴ':'down','ㅇ':'right',' ':'a',z:'a',Z:'a','ㅋ':'a',x:'b',X:'b','ㅌ':'b',e:'emote',E:'emote','ㄷ':'emote',Enter:'start',Escape:'b',Backspace:'b','1':'n1','2':'n2','3':'n3','4':'n4'};
+function KEYOF(e){var k=CODEMAP[e.code];if(k)return k;return KEYMAP[e.key]||null;}
+document.addEventListener('visibilitychange',function(){HELD.length=0;});
 document.addEventListener('keydown',function(e){
   var tg=e.target&&e.target.tagName;if(tg==='INPUT'||tg==='TEXTAREA')return;
-  var k=CODEMAP[e.code];if(!k)return;
+  var k=KEYOF(e);if(!k)return;
   e.preventDefault();
   if(DIRS[k]){if(HELD.indexOf(k)<0)HELD.push(k);press(k);}
   else if(!e.repeat)press(k);
 });
-document.addEventListener('keyup',function(e){var k=CODEMAP[e.code];if(!k||!DIRS[k])return;var i=HELD.indexOf(k);if(i>=0)HELD.splice(i,1);});
+document.addEventListener('keyup',function(e){var k=KEYOF(e);if(!k||!DIRS[k])return;var i=HELD.indexOf(k);if(i>=0)HELD.splice(i,1);});
 window.addEventListener('blur',function(){HELD.length=0;});
 Array.prototype.forEach.call(document.querySelectorAll('#pad [data-d]'),function(el){
   var d=el.dataset.d;
@@ -4392,7 +4423,7 @@ function loop(ts){
   requestAnimationFrame(loop);
 }
 ST=fixState(loadLocal());
-if(ST&&/tester|테스트/i.test(decodeURIComponent(location.hash||''))){ST.tester=1;if((ST.coin||0)<9999)ST.coin=9999;saveLocal();}
+if(ST&&/tester|테스트|테스터/i.test(decodeURIComponent(location.hash||''))){ST.tester=1;if((ST.coin||0)<9999)ST.coin=9999;saveLocal();}
 if(ST)syncLast();
 paintHud();
 titleScreen();
@@ -4409,7 +4440,7 @@ function setupFlow(done){
 }
 function gcScreen(done,change){
   var grades=[1,2,3];
-  listScreen({head:'🏫 학년을 골라 주세요',body:'<div class="sub">같은 학년·반 친구들끼리 XP와 랭킹이 모여요. 잘못 고르면 메뉴의 "학년·반"에서 바꿀 수 있어요.</div>',
+  listScreen({head:'🏫 학년을 골라 주세요',body:'<div class="sub">같은 학년·반 친구들끼리 XP와 랭킹이 모여요. 한 번 고르면 바꿀 수 없으니 신중하게 골라요!</div>',
     items:grades.map(function(g){return {t:g+'학년'};}).concat(ST.tester?[{t:'👩‍🏫 교사용: 전체 보기'}]:[]).concat(change?[{t:'← 취소'}]:[]),
     onSel:function(i){
       if(i<3){classPick(grades[i]);}
@@ -4417,11 +4448,36 @@ function gcScreen(done,change){
       else{closeOv();done&&done();}
     },onB:change?function(){closeOv();done&&done();}:null});
   function classPick(g){
-    var cs=[];for(var c=1;c<=15;c++)cs.push(c);
+    var cs=[];for(var c=1;c<=9;c++)cs.push(c);
     listScreen({head:'🏫 '+g+'학년 몇 반인가요?',body:'<div class="sub">내 반을 골라 주세요.</div>',
       items:cs.map(function(c){return {t:g+'학년 '+c+'반'+((ST.gc===g+'-'+c)?'  ← 현재':'')};}).concat([{t:'← 학년 다시 고르기'}]),
-      onSel:function(i){if(i>=15){gcScreen(done,change);return;}ST.gc=g+'-'+cs[i];saveLocal();schedulePush();closeOv();paintHud();toast('🏫 '+gcLabel(ST.gc)+' 로 등록했어요!');done&&done();},
+      onSel:function(i){if(i>=9){gcScreen(done,change);return;}ST.gc=g+'-'+cs[i];saveLocal();schedulePush();closeOv();paintHud();toast('🏫 '+gcLabel(ST.gc)+' 로 등록했어요!');done&&done();},
       onB:function(){gcScreen(done,change);}});
   }
+}
+
+var TUT=[
+ ['🌱 스물 마을은?','수능이 끝난 우리 반이 함께 "어른 되기"를 배우는 모험 RPG예요. 마을을 돌아다니며 퀴즈를 풀고, 미니게임과 운전학원에도 도전해요.'],
+ ['⌨️ 컴퓨터 조작','이동: 방향키 또는 W A S D\nA 버튼(말 걸기·확인): Z 또는 Space\nB 버튼(취소·닫기): X\n메뉴: Enter · 이모티콘: E · 선택지 고르기: 숫자 1~4'],
+ ['📱 휴대폰 조작','화면 아래 십자키로 이동하고, A 버튼으로 말 걸기·확인, B 버튼으로 취소, MENU 버튼으로 메뉴를 열어요. 화면을 톡 눌러도 대화가 넘어가요.'],
+ ['🎯 이렇게 진행해요','① 마을 가게 주민에게 말을 걸어 퀴즈 풀기 → XP 획득\n② 풀숲의 사기몬·퀴즈몬 만나기 (도망치면 코인이 줄어요)\n③ 체육관 4곳 배지 모으기 → 졸업의 문 열기\n중간에 담임 선생님이 📩 메시지로 다음 안내를 줘요.'],
+ ['🏫 우리 반 공동 게이지','시작할 때 학년·반을 고르면 같은 반 친구들의 XP가 모여 반 게이지가 차올라요. 학년·반은 한 번 고르면 바꿀 수 없으니 신중하게! 별명은 실명 대신 편한 별명으로 정해요.'],
+ ['💾 저장 · 이어하기','진행 상황은 자동으로 저장돼요. 다음에 같은 기기와 주소로 들어와 "이어하기"를 누르면 돼요. 이제 별명을 정하고 캐릭터를 골라 볼까요?']
+];
+function tutorialScreen(done){
+  var s={i:0};
+  s.render=function(){
+    var t=TUT[s.i],last=s.i===TUT.length-1;
+    var dots=TUT.map(function(_,k){return '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 3px;background:'+(k===s.i?'#ffd84d':'rgba(255,255,255,.3)')+'"></span>';}).join('');
+    $('#ov').innerHTML='<div class="win"><div class="hd">📖 게임 방법 '+(s.i+1)+'/'+TUT.length+'</div><div class="bd"><div style="font-size:18px;font-weight:700;margin:6px 0 10px">'+esc(t[0])+'</div><div style="white-space:pre-line;line-height:1.7;font-size:14px;min-height:130px">'+esc(t[1])+'</div><div style="text-align:center;margin-top:10px">'+dots+'</div></div>'
+     +'<div class="bt">'+(s.i>0?'<button data-b="1">◀ 이전(X)</button>':'')+'<button data-a="1">'+(last?'시작하기 ▶':'다음 ▶ (Z)')+'</button>'+(last?'':'<button data-btn="skip">건너뛰기</button>')+'</div></div>';
+  };
+  function fin(){closeOv();done&&done();}
+  s.key=function(k){
+    if(k==='a'||k==='start'||k==='right'||k==='down'){beep(620,.04);if(s.i>=TUT.length-1)fin();else{s.i++;s.render();}}
+    else if(k==='b'||k==='left'||k==='up'){if(s.i>0){s.i--;s.render();beep(520,.03);}else if(k==='b'){fin();}}
+  };
+  s.btn=function(b){if(b==='skip')fin();};
+  openOv(s);
 }
 </script></body></html>
