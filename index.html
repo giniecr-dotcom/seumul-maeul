@@ -2872,8 +2872,8 @@ function endingMovie(done){
   function capAt(t){for(var j=0;j<CAP.length;j++)if(t>=CAP[j][0]&&t<CAP[j][1])return CAP[j];return null;}
   function finish(){if(s.fin)return;s.fin=true;cancelAnimationFrame(s.raf);closeOv();if(done)done();}
   s.render=function(){
-    $('#ov').innerHTML='<div class="win" style="background:#05060f"><div class="bd" style="padding:6px"><canvas id="em" width="'+W+'" height="'+H+'" style="width:100%;border-radius:10px;display:block"></canvas>'
-      +'<div id="emc" style="min-height:64px;margin-top:8px;font-size:16px;line-height:1.6;text-align:center;font-weight:700"></div></div>'
+    $('#ov').innerHTML='<div class="win" style="background:#05060f;color:#fff"><div class="bd" style="padding:6px"><canvas id="em" width="'+W+'" height="'+H+'" style="width:100%;border-radius:10px;display:block"></canvas>'
+      +'<div id="emc" style="min-height:72px;margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.08);color:#fff;font-size:17px;line-height:1.6;text-align:center;font-weight:700;text-shadow:0 1px 3px #000"></div></div>'
       +'<div class="bt"><button data-btn="skip">⏭ 건너뛰기</button></div></div>';
     s.t0=Date.now();
     var cv=$('#em'),c=cv.getContext('2d'),emc=$('#emc'),last=null;
@@ -2882,7 +2882,7 @@ function endingMovie(done){
       if(t>=DUR+2){finish();return;}
       draw(c,Math.min(t,DUR));
       var cp=capAt(t),key=cp?cp[2]+cp[3]:'';
-      if(key!==last){last=key;emc.innerHTML=cp?(cp[2]?'<span style="opacity:.7;font-size:13px">'+esc(cp[2])+'</span><br>':'')+esc(cp[3]):'';}
+      if(key!==last){last=key;emc.innerHTML=cp?(cp[2]?'<span style="color:#ffd88a;font-size:13px">'+esc(cp[2])+'</span><br>':'')+esc(cp[3]):'';}
       s.raf=requestAnimationFrame(loop);
     })();
   };
