@@ -3402,6 +3402,37 @@ function clearTownBuildings(tid){
 }
 function nearRoad(T,x,y){for(var j=-1;j<=1;j++)for(var i=-1;i<=1;i++){var c=(T[y+j]||[])[x+i];if(c==='='||c==='D'||c==='R'||c==='B'||c==='G')return true;}return false;}
 var BLOCK={'#':1,'R':1,'B':1,'~':1,'W':1,'T':1,'H':1,'P':1,'G':1,'L':1};
+/* 풀숲을 지도 전체에 고르게 흩뿌리기 (칸 격자마다 하나씩) */
+function scatterGrass(T,w,h,R,cw,ch){
+  for(var cy=1;cy<h-2;cy+=ch)for(var cx=1;cx<w-2;cx+=cw){
+    if(R()<.12)continue;
+    var pw=3+Math.floor(R()*4),ph=2+Math.floor(R()*3);
+    var px=cx+Math.floor(R()*Math.max(1,cw-pw+1)),py=cy+Math.floor(R()*Math.max(1,ch-ph+1));
+    for(var yy=py;yy<py+ph;yy++)for(var xx=px;xx<px+pw;xx++){
+      if(xx<1||yy<1||xx>=w-1||yy>=h-1)continue;
+      var dx=(xx-(px+pw/2)+.5)/(pw/2),dy=(yy-(py+ph/2)+.5)/(ph/2);
+      if(dx*dx+dy*dy<=1.2&&T[yy][xx]==='.')T[yy][xx]=',';
+    }
+  }
+}
+/* 길로만 걸어도 풀숲을 지나가도록: 일정 간격으로 길 위에 풀숲 띠(4칸)를 놓는다 */
+function roadGrass(T,w,h,keepPts){
+  function isR(x,y){return T[y]&&T[y][x]==='=';}
+  function near(x,y){
+    for(var i=0;i<keepPts.length;i++){var k=keepPts[i];if(Math.abs(k[0]-x)+Math.abs(k[1]-y)<=1)return true;}
+    for(var dy=-1;dy<=1;dy++)for(var dx=-1;dx<=1;dx++){var c=(T[y+dy]||[])[x+dx];if(c==='D'||c==='G')return true;}
+    return false;
+  }
+  var conv=[];
+  for(var y=1;y<h-1;y++)for(var x=1;x<w-1;x++){
+    if(!isR(x,y)||near(x,y))continue;
+    var hr=1,vr=1,i;
+    for(i=1;isR(x-i,y);i++)hr++;for(i=1;isR(x+i,y);i++)hr++;for(i=1;isR(x,y-i);i++)vr++;for(i=1;isR(x,y+i);i++)vr++;
+    if(hr>=vr){if(((x+3)%11)<4)conv.push([x,y]);}
+    else if(((y+3)%11)<4)conv.push([x,y]);
+  }
+  conv.forEach(function(c){T[c[1]][c[0]]=',';});
+}
 function genTown(tid,plan,attempt){
   clearTownBuildings(tid);
   var inf=TOWN_INFO[tid],w=inf.w,hub=tid==='town',r1=inf.r1,r2=inf.r2,h=hub?inf.h:r2+9;
@@ -3468,14 +3499,7 @@ function genTown(tid,plan,attempt){
     rect(T,20,r2+2,2,12,'=');rect(T,1,32,w-2,1,'#');rect(T,20,32,2,1,'G');rect(T,20,33,2,2,'=');
   }
   /* 수풀·연못·나무: 마을마다 불규칙하게 */
-  var zoneTop=1,zoneBot=h-2,nPatch=ri(17,24);
-  for(var p=0;p<nPatch;p++){
-    var pw=ri(5,14),ph=ri(2,6),px=ri(2,w-pw-2),py=ri(zoneTop,zoneBot-ph);
-    for(var yy=py;yy<py+ph;yy++){for(var xx=px;xx<px+pw;xx++){
-      var dx=(xx-(px+pw/2))/(pw/2),dy=(yy-(py+ph/2))/(ph/2);
-      if(dx*dx+dy*dy<=1.15&&T[yy]&&T[yy][xx]==='.')T[yy][xx]=',';
-    }}
-  }
+  scatterGrass(T,w,h,R,8,6);
   var nPond=ri(1,2);
   for(var q=0;q<nPond;q++){var qx=ri(3,w-8),qy=ri(2,h-5),qw=ri(3,5),qh=ri(2,3),ok=true;
     for(var yy=qy-1;yy<=qy+qh&&ok;yy++)for(var xx=qx-1;xx<=qx+qw;xx++){if(!T[yy]||T[yy][xx]===undefined||nearRoad(T,xx,yy)){ok=false;break;}}
@@ -3512,6 +3536,7 @@ function genTown(tid,plan,attempt){
     npcs.push({id:'g_'+tid,x:gnx,y:ey+1,dir:'down',kind:'talk',name:'마을 안내원',emo:'🧭',pal:PALS[2],lines:inf.line});
     start={x:inf.side==='w'?1:w-2,y:ey};
   }
+  (function(){var kp=[[start.x,start.y]];Object.keys(warps).forEach(function(k){var a=k.split(',');kp.push([+a[0],+a[1]]);});npcs.forEach(function(n){kp.push([n.x,n.y]);});roadGrass(T,w,h,kp);})();
   /* 도달 가능성 검사 */
   var seen={},q=[[start.x,start.y]];seen[start.x+','+start.y]=1;var blocked={};
   npcs.forEach(function(n){blocked[n.x+','+n.y]=1;});
@@ -3629,9 +3654,7 @@ function genDest(d,attempt){
   if(big&&typeof seaExtend==='function')seaExtend(T,d,w,h);
   var gb={k:'gate_'+d.id,n:d.kind==='train'?d.n+'역':d.n+' 공항',ico:d.kind==='train'?'🚉':'✈️',col:d.kind==='train'?'#8a6a3a':'#3a79b8',floor:'#ddd',kind:'gate',x:12,y:1};
   placeBuilding(T,gb,'dest_'+d.id);
-  var np=big?ri(13,18):ri(9,12);
-  for(var p=0;p<np;p++){var pw=ri(4,10),ph=ri(2,5),px=ri(2,w-pw-2),py=ri(2,h-ph-2);
-    for(var yy=py;yy<py+ph;yy++)for(var xx=px;xx<px+pw;xx++){var dx=(xx-(px+pw/2))/(pw/2),dy=(yy-(py+ph/2))/(ph/2);if(dx*dx+dy*dy<=1.1&&T[yy]&&T[yy][xx]==='.')T[yy][xx]=',';}}
+  scatterGrass(T,w,h,R,big?8:7,big?6:5);
   var tm=L.trees;if(big)tm=Math.max(8,Math.round(tm*.5));
   for(var y=1;y<h-1;y++)for(var x=1;x<w-1;x++){var c0=T[y][x];if(c0!=='.'&&c0!==',')continue;if(nearRoad(T,x,y))continue;var hv=(((x*73856093)^(y*19349663)^(attempt*83492791+strHash(d.id)))>>>0)%tm;if(c0==='.'){if(hv===0)T[y][x]='w';else if(hv===1||(tm<=12&&hv===3))T[y][x]='#';}else if(hv===2)T[y][x]='#';}
   var npcs=[],pal=[cpal(d,0),cpal(d,1),cpal(d,2)];
@@ -3649,7 +3672,7 @@ function genDest(d,attempt){
   npcs.push({id:'dh_'+d.id,x:hx,y:hy,dir:od[0]>0?'right':od[0]<0?'left':od[1]>0?'down':'up',kind:'hidden',qid:d.hq,name:'???',emo:'❔',sprite:'emoji',em:d.hem,did:d.id,hid:1});
   var spotsOk=true;
   if(big){
-    var taken=[];var cols=[4,11,18,25,32,39,43],rows=[5,11,17,23,29],cand=[];
+    var taken=[];var cols=[4,8,12,16,20,24,28,32,36,40,43],rows=[5,8,11,14,17,20,23,26,29],cand=[];
     cols.forEach(function(cx){rows.forEach(function(cy){cand.push([cx+ri(-2,2),cy+ri(-2,2)]);});});
     for(var si=cand.length-1;si>0;si--){var sj=ri(0,si),st=cand[si];cand[si]=cand[sj];cand[sj]=st;}
     d.spots.forEach(function(sp,i){
@@ -3697,6 +3720,7 @@ function genDest(d,attempt){
     placed.forEach(function(o){npcs.push(o);});
   })();
   T[8][16]='.';npcs.push({id:'dhome_'+d.id,x:16,y:8,dir:'left',kind:'homegate',name:'태초 마을 귀환 표지판',sprite:'emoji',em:'🏠',tk:d.kind});
+  (function(){var kp=[[14,4],[14,8],[15,8]];for(var yy=4;yy<=10;yy++){kp.push([14,yy]);kp.push([15,yy]);}npcs.forEach(function(n){kp.push([n.x,n.y]);});roadGrass(T,w,h,kp);})();
   var warps={};warps['14,4']={m:'in_'+(d.kind==='train'?'station':'airport'),x:5,y:7,d:'up'};
   var seen={},q=[[14,8]];seen['14,8']=1;var bl={};npcs.forEach(function(n){bl[n.x+','+n.y]=1;});
   while(q.length){var cu=q.shift();[[1,0],[-1,0],[0,1],[0,-1]].forEach(function(dd){var nx=cu[0]+dd[0],ny=cu[1]+dd[1],kk=nx+','+ny;if(nx<0||ny<0||nx>=w||ny>=h||seen[kk])return;if(BLOCK[T[ny][nx]]||bl[kk])return;seen[kk]=1;q.push([nx,ny]);});}
@@ -4945,10 +4969,8 @@ function tripMenu(kind,country,ov){
   var back=ov?ov.back:(kind==='air'&&country?function(){tripMenu('air');}:null);
   var head=kind==='train'?'🚉 기차표 사기':(ov?ov.head:'✈️ 항공권 사기 — '+COUNTRIES[country].n);
   listScreen({head:head+' (🪙 '+(ST.coin||0)+')',body:'<div class="sub">왕복 표 값은 코인이에요. 처음 가는 곳은 여행 도장과 XP를 받아요. ⚠️ 여행지 풀숲에는 소매치기가 있어요!</div>',
-    items:[{t:'🗺️ 지도에서 고르기'}].concat(list.map(function(d){return {t:d.ico+' '+d.n+' — 🪙'+d.fee+(ST.trip[d.id]?'  ✅ 도장':'')};})).concat([{t:back?'← 뒤로':'나가기'}]),
+    items:list.map(function(d){return {t:d.ico+' '+d.n+' — 🪙'+d.fee+(ST.trip[d.id]?'  ✅ 도장':'')};}).concat([{t:back?'← 뒤로':'나가기'}]),
     onSel:function(i){
-      if(i===0){closeOv();mapScreen({pick:true,kind:kind,tab:kind==='train'?'kr':'world',back:function(){tripMenu(kind,country,ov);}});return;}
-      i--;
       if(i>=list.length){closeOv();if(back)back();return;}
       buyTrip(list[i]);
     },onB:closeOv});
@@ -4960,9 +4982,9 @@ function buyTrip(d){
   return true;
 }
 function contMenu(){
-  var items=[{t:'🗺️ 세계 지도에서 고르기'}].concat(CONTS.map(function(c){return {t:c.ico+' '+c.n};})).concat([{t:'🌊 오대양 특별 여행'},{t:'나가기'}]);
+  var items=CONTS.map(function(c){return {t:c.ico+' '+c.n};}).concat([{t:'🌊 오대양 특별 여행'},{t:'나가기'}]);
   listScreen({head:'✈️ 어디로 갈까요? (🪙 '+(ST.coin||0)+')',body:'<div class="sub">육대주와 오대양 곳곳에 도시가 있어요. 도시마다 랜드마크와 히든 퀘스트가 있어요!</div>',items:items,
-    onSel:function(i){closeOv();if(i===0){mapScreen({pick:true,kind:'air',tab:'world',back:contMenu});return;}i--;if(i<CONTS.length)countryMenu(CONTS[i]);else if(i===CONTS.length)oceanMenu();},onB:closeOv});
+    onSel:function(i){closeOv();if(i<CONTS.length)countryMenu(CONTS[i]);else if(i===CONTS.length)oceanMenu();},onB:closeOv});
 }
 function countryMenu(ct){
   var cs=Object.keys(COUNTRIES).filter(function(k){return COUNTRIES[k].cont===ct.id&&DEST.some(function(d){return d.country===k&&d.kind==='air';});});
@@ -5298,13 +5320,28 @@ function landmarkMenu(n){
       else closeOv();
     },onB:closeOv});
 }
+function lmShot(c,W,H,n){
+  var oc=ctx,t=performance.now();
+  try{
+    ctx=c;
+    var g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,'#bfe3ff');g.addColorStop(.6,'#e8f6ff');g.addColorStop(.601,'#8fcf6a');g.addColorStop(1,'#6fb84a');c.fillStyle=g;c.fillRect(0,0,W,H);
+    c.fillStyle='rgba(120,90,50,.35)';c.fillRect(0,H*.82,W,H*.18);
+    if(n.sprite==='spot'&&typeof drawSpot==='function'){c.save();c.translate(0,H-100);c.scale(.95,.95);drawSpot(n.st,0,0,t,n.name);c.restore();}
+    else if(typeof drawLandmark==='function'&&n.did&&typeof LMART!=='undefined'&&LMART[n.did]){c.save();c.translate(-6,H-150);c.scale(.5,.5);drawLandmark(n.did,0,0,t);c.restore();}
+    else{c.font='64px serif';c.textAlign='center';c.fillText('📸',W*.35,H*.6);}
+    c.save();c.translate(W-96,H-110);c.scale(1.6,1.6);
+    drawChar(0,0,'down',0,heroPal());
+    c.restore();
+  }catch(e){}
+  ctx=oc;
+}
 function lmPhoto(n,I,back){
   var first=!ST.alb[I.key];
   if(first){ST.alb[I.key]=1;saveLocal();afterChange('📸 인증샷!');}
   var s={};
   s.render=function(){
-    $('#ov').innerHTML='<div class="win"><div class="hd">📸 인증샷</div><div class="bd" style="text-align:center"><div style="display:inline-block;background:#fff;padding:10px 10px 6px;border-radius:4px;box-shadow:0 4px 14px rgba(0,0,0,.4);transform:rotate(-2deg)"><canvas id="phc" width="288" height="160" style="background:linear-gradient(#bfe3ff,#e8f6ff 55%,#8fcf6a 56%);display:block"></canvas><div style="color:#333;font-weight:800;margin-top:6px">'+esc(n.name)+'</div><div style="color:#777;font-size:12px">'+esc(I.d.n||'')+' · '+dayKey()+' · '+esc(ST.nick)+'</div></div><div class="sub" style="margin-top:8px">'+(first?'첫 인증샷! 앨범에 저장됐어요. (+2 XP)':'앨범에 이미 있는 사진이에요.')+'</div></div><div class="bt"><button data-a="1">A · 확인</button></div></div>';
-    var cv=$('#phc');if(cv&&cv.getContext){var c=cv.getContext('2d'),oc=ctx;try{ctx=c;if(n.sprite==='spot'&&typeof drawSpot==='function')drawSpot(n.st,72,34,performance.now(),n.name);else{c.font='64px serif';c.textAlign='center';c.fillText('📸',144,100);}}catch(e){}ctx=oc;}
+    $('#ov').innerHTML='<div class="win"><div class="hd">📸 인증샷</div><div class="bd" style="text-align:center"><div style="display:inline-block;background:#fff;padding:10px 10px 6px;border-radius:4px;box-shadow:0 4px 14px rgba(0,0,0,.4);transform:rotate(-2deg)"><canvas id="phc" width="320" height="190" style="background:linear-gradient(#bfe3ff,#e8f6ff 55%,#8fcf6a 56%);display:block"></canvas><div style="color:#333;font-weight:800;margin-top:6px">'+esc(n.name)+'</div><div style="color:#777;font-size:12px">'+esc(I.d.n||'')+' · '+dayKey()+' · '+esc(ST.nick)+'</div></div><div class="sub" style="margin-top:8px">'+(first?'첫 인증샷! 앨범에 저장됐어요. (+2 XP)':'앨범에 이미 있는 사진이에요.')+'</div></div><div class="bt"><button data-a="1">A · 확인</button></div></div>';
+    var cv=$('#phc');if(cv&&cv.getContext){var c=cv.getContext('2d');lmShot(c,cv.width,cv.height,n);}
   };
   s.key=function(k){if(k==='a'||k==='b'||k==='start')closeOv();};
   openOv(s);
