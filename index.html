@@ -5636,4 +5636,27 @@ function jobParcel(){
   s.stop=function(){cancelAnimationFrame(s.raf);clearTimeout(s.to);};
   openOv(s);
 }
+
+/* ---------- 업데이트 안내 팝업 (버전당 1회) ---------- */
+var NOTE_ID='n20261127';
+function showUpdateNote(){
+  var s=listScreen({head:'🎉 새 소식! 스물 마을 업데이트',
+    body:'<div style="text-align:left;line-height:1.6;font-size:14px">'+
+    '🌿 <b>풀숲</b>이 더 많아졌어요.<br>'+
+    '🌊 <b>국내 도시</b>마다 분위기가 달라졌고, 바닷가 도시엔 파도·모래사장·<b>배와 갈매기</b>가 생겼어요.<br>'+
+    '📍 <b>명소</b> 모습이 다양해졌어요. 폭포·등대·온천·케이블카·놀이공원 등!<br>'+
+    '📸 명소에 말을 걸면 <b>인증샷·기념품·소원 빌기·이야기</b>를 할 수 있어요.<br>'+
+    '⚫ 태초 마을 <b>기원</b>: 오목(AI 초·중·고급 / 친구와 온라인 대결), 숫자야구<br>'+
+    '💼 태초 마을 <b>알바 센터</b>: 편의점·카페·택배 알바로 코인 벌기 (하루 4번)'+
+    '</div>',
+    items:[{t:'확인했어요!'}],onSel:function(){closeOv();},onB:function(){closeOv();}});
+  s.stop=function(){try{localStorage.setItem(NOTE_ID,'1');}catch(e){}};
+}
+(function(){
+  var seen=false;try{seen=!!localStorage.getItem(NOTE_ID);}catch(e){}
+  if(seen)return;
+  var iv=setInterval(function(){
+    try{if(ST&&ST.nick&&!OV&&!DLG&&!G.lock&&!G.moving&&G.map&&String(G.map)){clearInterval(iv);setTimeout(function(){if(!OV&&!DLG)showUpdateNote();else{try{localStorage.removeItem(NOTE_ID);}catch(e){}}},800);}}catch(e){}
+  },1500);
+})();
 </script></body></html>
