@@ -5590,7 +5590,7 @@ function jobPay(score,max,base){var f=score/max;return f>=1?base:(f>=.8?Math.max
 function jobMenu(n){
   var j=jobState(),left=ST.tester?99:JOB_MAX-j.n;
   listScreen({head:'💼 알바 센터',body:'<div class="sub">오늘 남은 근무 횟수 <b>'+(ST.tester?'∞':left+'/'+JOB_MAX)+'</b> · 오늘 번 돈 🪙'+j.e+'<br>일을 잘할수록 보수가 올라가요. 너무 무리하지 않게 하루 '+JOB_MAX+'번까지만 일할 수 있어요.</div>',
-    items:[{t:'🏪 편의점 계산 알바'},{t:'☕ 카페 주문 알바'},{t:'📦 택배 분류 알바'},{t:'닫기'}],
+    items:[{t:'🏪 편의점 계산 알바'},{t:'☕ 카페 제조 알바 (순서 외우기)'},{t:'📦 택배 분류 알바'},{t:'닫기'}],
     onSel:function(i){
       if(i===3){closeOv();return;}
       if(left<=0){toast('오늘은 충분히 일했어요. 내일 다시 오세요!');return;}
@@ -5629,28 +5629,46 @@ function jobStore(){
   s.stop=function(){clearTimeout(s.to);};
   openOv(s);
 }
-/* 카페: 주문서대로 메뉴 담기 */
+/* 카페: 제조법을 잠깐 보여 주면 외워서 순서대로 만들기 */
 function jobCafe(){
-  var menu=[['☕','아메리카노'],['🥛','라떼'],['🍰','케이크'],['🍪','쿠키']];
-  var s={q:0,score:0,order:null,got:[0,0,0,0],lock:false,to:0};
-  function make(){var o=[0,0,0,0],k=2+(s.q>=2?1:0);for(var i=0;i<k;i++){o[Math.floor(Math.random()*4)]+=1;}s.order=o;s.got=[0,0,0,0];}
+  var ING={cup:'🥤 컵',ice:'🧊 얼음',esp:'☕ 에스프레소',milk:'🥛 우유',straw:'🍓 딸기',syrup:'🍯 시럽',cream:'🍦 휘핑크림',choco:'🍫 초콜릿',bread:'🍞 빵'};
+  var KEYS=Object.keys(ING);
+  var REC=[['아이스 라떼',['cup','ice','esp','milk']],['딸기 스무디',['cup','straw','ice','milk']],['초코 라떼',['cup','choco','milk','cream']],['딸기 케이크',['bread','cream','straw']],['초코 토스트',['bread','choco','syrup']],['카라멜 마키아토',['cup','syrup','milk','esp','cream']],['딸기 초코 빙수',['cup','ice','milk','straw','choco']],['허니 브레드',['bread','syrup','cream','straw']]];
+  var s={q:0,score:0,rec:null,phase:'show',step:0,lock:false,to:0,t0:0,raf:0,used:[]};
+  function pick(){
+    var want=s.q<2?[3,4]:(s.q<4?[4]:[4,5]),c=REC.filter(function(r,i){return want.indexOf(r[1].length)>=0&&s.used.indexOf(i)<0;});
+    if(!c.length)c=REC;var r=c[Math.floor(Math.random()*c.length)];s.used.push(REC.indexOf(r));s.rec=r;s.step=0;s.phase='show';s.lock=false;
+    s.dur=1600*r[1].length+1200;s.t0=Date.now();
+  }
+  function arrow(list,upto){return list.map(function(k,i){return '<span style="display:inline-block;margin:3px;padding:4px 8px;border-radius:8px;background:'+(i<upto?'#bfe8c8':'#fff')+';border:2px solid #333">'+(i+1)+'. '+ING[k]+'</span>';}).join('');}
+  function startMake(){s.phase='make';s.step=0;cancelAnimationFrame(s.raf);clearTimeout(s.to);s.render();}
   s.render=function(){
-    if(!s.order)make();
-    var txt=menu.map(function(m,i){return s.order[i]?m[0]+' '+m[1]+' '+s.order[i]+'개':'';}).filter(Boolean).join(', ');
-    $('#ov').innerHTML=mgShell('☕ 카페 주문 알바 ('+(s.q+1)+'/5)','<div class="sub">주문서를 보고 메뉴를 정확히 담은 뒤 ‘주문 완료’를 눌러요.</div><div class="big" style="font-size:17px">📝 '+txt+'</div>'+menu.map(function(m,i){return '<button data-btn="m'+i+'" style="min-width:46%;margin:4px">'+m[0]+' '+m[1]+' <b>'+s.got[i]+'</b></button>';}).join('')+'<br><button data-btn="reset" style="margin:4px">↺ 다시 담기</button><button data-btn="go" style="margin:4px">✅ 주문 완료</button>','<button data-btn="quit">그만두기</button>');
+    if(!s.rec)pick();var r=s.rec,body;
+    if(s.phase==='show'){
+      body='<div class="sub">제조법을 잘 보고 외우세요! 곧 사라져요.</div><div class="big" style="font-size:18px">📝 '+r[0]+'</div><div style="text-align:center">'+arrow(r[1],0)+'</div><div style="height:10px;background:#2a2f45;border-radius:6px;overflow:hidden;margin:8px 0"><div id="cbar" style="height:100%;width:100%;background:#f4b840"></div></div><button data-btn="ready" style="width:100%">✅ 외웠어요!</button>';
+    }else{
+      body='<div class="sub">'+r[0]+'을(를) 순서대로 만들어요. 틀리면 그 주문은 실패!</div><div class="big" style="font-size:16px">'+r[1].map(function(k,i){return i<s.step?'✅':'⬜';}).join(' ')+'</div><div style="text-align:center">'+KEYS.map(function(k){return '<button data-btn="i_'+k+'" style="min-width:30%;margin:4px">'+ING[k]+'</button>';}).join('')+'</div>';
+    }
+    $('#ov').innerHTML=mgShell('☕ 카페 제조 알바 ('+(s.q+1)+'/5)',body,'<button data-btn="quit">그만두기</button>');
+    if(s.phase==='show'){cancelAnimationFrame(s.raf);(function tick(){if(OV!==s||s.phase!=='show')return;var f=1-(Date.now()-s.t0)/s.dur,bar=$('#cbar');if(bar)bar.style.width=Math.max(0,f*100)+'%';if(f<=0){startMake();return;}s.raf=requestAnimationFrame(tick);})();}
   };
+  function next(ok){
+    s.lock=true;
+    if(ok){s.score++;toast('⭕ 완성! '+s.rec[0]);beep(880,.06);}
+    else{toast('❌ 실패! 정답: '+s.rec[1].map(function(k){return ING[k];}).join(' → '));beep(250,.1);}
+    s.to=setTimeout(function(){if(OV!==s)return;s.q++;if(s.q>=5){closeOv();jobFinish('☕ 카페',s.score,5,5,'완성한 주문 '+s.score+'건');}else{s.rec=null;s.render();}},ok?700:1800);
+  }
   s.btn=function(b){
     if(b==='quit'){closeOv();return;}if(s.lock)return;
-    if(b==='reset'){s.got=[0,0,0,0];s.render();return;}
-    if(b.charAt(0)==='m'){var i=+b.charAt(1);if(s.got[i]<5)s.got[i]++;s.render();return;}
-    if(b==='go'){
-      var ok=s.got.every(function(v,i){return v===s.order[i];});s.lock=true;
-      if(ok){s.score++;toast('⭕ 주문 정확!');beep(880,.05);}else{toast('❌ 주문이 달랐어요.');beep(250,.1);}
-      s.to=setTimeout(function(){if(OV!==s)return;s.q++;s.lock=false;if(s.q>=5){closeOv();jobFinish('☕ 카페',s.score,5,5,'정확한 주문 '+s.score+'건');}else{s.order=null;s.render();}},700);
+    if(b==='ready'&&s.phase==='show'){startMake();return;}
+    if(s.phase==='make'&&b.indexOf('i_')===0){
+      var k=b.slice(2);
+      if(k===s.rec[1][s.step]){s.step++;beep(600+s.step*60,.03);if(s.step>=s.rec[1].length){s.render();next(true);}else s.render();}
+      else next(false);
     }
   };
-  s.key=function(k){if(k==='b')closeOv();else if(k.charAt(0)==='n'&&+k.charAt(1)>=1&&+k.charAt(1)<=4)s.btn('m'+(+k.charAt(1)-1));else if(k==='a')s.btn('go');};
-  s.stop=function(){clearTimeout(s.to);};
+  s.key=function(k){if(k==='b')closeOv();else if(k==='a'&&s.phase==='show')startMake();};
+  s.stop=function(){cancelAnimationFrame(s.raf);clearTimeout(s.to);};
   openOv(s);
 }
 /* 택배: 주소에 맞는 레일로 분류 (제한 시간) */
